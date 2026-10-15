@@ -1,0 +1,1024 @@
+=== test-results/06-purchase-purchase-from-the-catalog-to-a-confirmed-receipt-desktop
+# Instructions
+
+- Following Playwright test failed.
+- Explain why, be concise, respect Playwright best practices.
+- Provide a snippet of code with the fix, if possible.
+
+# Test info
+
+- Name: 06-purchase.spec.ts >> purchase >> from the catalog to a confirmed receipt
+- Location: e2e/06-purchase.spec.ts:4:3
+
+# Error details
+
+```
+Error: expect(locator).toBeVisible() failed
+
+Locator: getByRole('heading', { name: 'Compra confirmada' })
+Expected: visible
+Timeout: 8000ms
+Error: element(s) not found
+
+Call log:
+  - Expect "toBeVisible" getByRole('heading', { name: 'Compra confirmada' }) with timeout 8000ms
+  - waiting for getByRole('heading', { name: 'Compra confirmada' })
+
+```
+
+```yaml
+- banner:
+  - link "KURIO":
+    - /url: /
+  - navigation "Principal":
+    - link "Início":
+      - /url: /
+    - text: Mercado Criadores Aprenda
+  - button "Buscar"
+  - link "Carrinho, 2 itens":
+    - /url: /cart
+    - text: "2"
+  - link "Perfil de Anthony Silva":
+    - /url: /profile
+    - text: Anthony Silva
+  - button "Sair"
+- main:
+  - status:
+    - heading "Processando pagamento…" [level=1]
+    - paragraph: "Isto leva alguns segundos. Você pode sair desta página: o pedido continua."
+  - region "Comprovante":
+    - term: Pedido
+    - definition: ord_000001
+    - term: Data
+    - definition: 15 de out. de 2026, 12:50
+    - term: Carteira
+    - definition: MetaMask Principal · 0x71C7…39A2
+    - list "Itens comprados":
+      - listitem:
+        - paragraph: "Emerald Ape #042"
+        - paragraph: Edição ABERTA · 2 × 1.19 ETH
+        - paragraph: 2.38 ETH
+    - term: Subtotal
+    - definition: 2.38 ETH
+    - term: Taxa de rede
+    - definition: 0.01 ETH
+    - term: Total
+    - definition: 2.39 ETH
+    - paragraph: Os valores acima ficaram registrados no momento da compra e não mudam se o catálogo mudar.
+  - link "Continuar explorando":
+    - /url: /
+- region "Notifications alt+T"
+- contentinfo:
+  - button "Open TanStack Router Devtools":
+    - img
+    - img
+    - text: "- TanStack Router"
+```
+
+# Test source
+
+```ts
+  1  | import { addToCartFromPage, cartLink, expect, signInThroughDialog, test } from './fixtures';
+  2  | 
+  3  | test.describe('purchase', () => {
+  4  |   test('from the catalog to a confirmed receipt', async ({ page, open }) => {
+  5  |     await open('/');
+  6  |     // the catalog → an NFT
+  7  |     await page.getByRole('link', { name: /Emerald Ape #042/ }).first().click();
+  8  |     await expect(page.getByRole('heading', { level: 1, name: 'Emerald Ape #042' })).toBeVisible();
+  9  |     await page.getByRole('radio', { name: 'ABERTA' }).click();
+  10 |     await page.getByRole('button', { name: 'Aumentar quantidade' }).click();
+  11 |     await page.getByRole('button', { name: 'COMPRAR' }).click();
+  12 |     await expect(cartLink(page)).toHaveAccessibleName('Carrinho, 2 itens');
+  13 | 
+  14 |     // the cart → sign in on the way → the checkout
+  15 |     await page.getByRole('link', { name: /^Carrinho/ }).click();
+  16 |     await expect(page.getByRole('list', { name: 'Itens do carrinho' })).toBeVisible();
+  17 |     await page.getByRole('button', { name: 'Entrar para finalizar' }).click();
+  18 |     const dialog = page.getByRole('dialog');
+  19 |     await dialog.getByLabel('E-mail').fill('anthony@example.com');
+  20 |     await dialog.getByLabel('Senha').fill('Senha@123');
+  21 |     await dialog.getByRole('button', { name: 'Entrar', exact: true }).click();
+  22 |     await page.getByRole('button', { name: 'Finalizar compra' }).click();
+  23 | 
+  24 |     await expect(page.getByRole('heading', { name: 'Finalizar compra' })).toBeVisible();
+  25 |     await expect(page.getByRole('radio', { name: /MetaMask Principal/ })).toBeChecked(); // the primary one
+  26 |     const total = await page.getByLabel('Resumo do pedido').getByText('Total', { exact: true }).locator('xpath=following-sibling::dd').textContent();
+  27 |     await page.getByRole('button', { name: 'Confirmar compra' }).click();
+  28 | 
+  29 |     // receipt
+> 30 |     await expect(page.getByRole('heading', { name: 'Compra confirmada' })).toBeVisible();
+     |                                                                            ^ Error: expect(locator).toBeVisible() failed
+  31 |     const receipt = page.getByLabel('Comprovante');
+  32 |     await expect(receipt.getByText('Emerald Ape #042')).toBeVisible();
+  33 |     await expect(receipt.getByText(/2 × /)).toBeVisible();
+  34 |     await expect(receipt.getByText('Total', { exact: true }).locator('xpath=following-sibling::dd')).toHaveText(total!);
+  35 |     await expect(page).toHaveURL(/\/orders\/ord_\d+/);
+  36 | 
+  37 |     // the cart was used up
+  38 |     await expect(cartLink(page)).toHaveAccessibleName('Carrinho, 0 itens');
+  39 |     await page.goto('/cart');
+  40 |     await expect(page.getByRole('heading', { name: 'Seu carrinho está vazio' })).toBeVisible();
+  41 |   });
+  42 | 
+  43 |   test('the receipt survives a refresh and keeps its values when the price moves later', async ({ page, open, mocks }) => {
+  44 |     await open('/');
+  45 |     await signInThroughDialog(page);
+  46 |     await addToCartFromPage(page, 'nft-1');
+  47 |     await page.goto('/checkout');
+  48 |     await page.getByRole('button', { name: 'Confirmar compra' }).click();
+  49 |     await expect(page.getByRole('heading', { name: 'Compra confirmada' })).toBeVisible();
+  50 |     const before = await page.getByLabel('Comprovante').innerText();
+  51 |     await mocks.setPrice('nft-1', '7.77');
+  52 |     await page.reload();
+  53 |     await expect(page.getByRole('heading', { name: 'Compra confirmada' })).toBeVisible();
+  54 |     expect(await page.getByLabel('Comprovante').innerText()).toBe(before);
+  55 |     expect(before).not.toContain('7.77');
+  56 |   });
+  57 | 
+  58 |   test('a visitor reaching the checkout is asked to sign in, and the cart is kept', async ({ page, open }) => {
+  59 |     await open('/');
+  60 |     await addToCartFromPage(page, 'nft-1');
+  61 |     await page.goto('/checkout');
+  62 |     await expect(page.getByRole('heading', { name: 'Entre para finalizar a compra' })).toBeVisible();
+  63 |     await expect(page.getByText('Seu carrinho continua guardado.')).toBeVisible();
+  64 |   });
+  65 | 
+  66 |   test('another user cannot open someone else\'s receipt', async ({ page, open }) => {
+  67 |     await open('/');
+  68 |     await signInThroughDialog(page);
+  69 |     await addToCartFromPage(page, 'nft-1');
+  70 |     await page.goto('/checkout');
+  71 |     await page.getByRole('button', { name: 'Confirmar compra' }).click();
+  72 |     await expect(page.getByRole('heading', { name: 'Compra confirmada' })).toBeVisible();
+  73 |     const address = page.url();
+  74 |     await page.getByRole('button', { name: 'Sair' }).click();
+  75 |     await signInThroughDialog(page, { email: 'collector@example.com', password: 'Senha@123', name: 'CryptoCollector' });
+  76 |     await page.goto(new URL(address).pathname);
+  77 |     await expect(page.getByRole('heading', { name: 'Pedido não encontrado' })).toBeVisible();
+  78 |   });
+  79 | });
+  80 | 
+```=== test-results/12-loading-failure-loading-feb84-is-added-trying-again-works-desktop
+# Instructions
+
+- Following Playwright test failed.
+- Explain why, be concise, respect Playwright best practices.
+- Provide a snippet of code with the fix, if possible.
+
+# Test info
+
+- Name: 12-loading-failure.spec.ts >> loading, failure and retry >> buying while offline explains the failure and nothing is added; trying again works
+- Location: e2e/12-loading-failure.spec.ts:49:3
+
+# Error details
+
+```
+Test timeout of 45000ms exceeded.
+```
+
+```
+Error: locator.click: Test timeout of 45000ms exceeded.
+Call log:
+  - waiting for getByRole('button', { name: 'COMPRAR' })
+
+```
+
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - link "KURIO" [ref=e6] [cursor=pointer]:
+        - /url: /
+      - navigation "Principal" [ref=e7]:
+        - link "Início" [ref=e8] [cursor=pointer]:
+          - /url: /
+        - generic "Em breve" [ref=e9]: Mercado
+        - generic "Em breve" [ref=e10]: Criadores
+        - generic "Em breve" [ref=e11]: Aprenda
+      - generic [ref=e12]:
+        - button "Buscar" [ref=e13]
+        - link "Carrinho, 0 itens" [ref=e16] [cursor=pointer]:
+          - /url: /cart
+        - button "Entrar" [ref=e21]
+  - main [ref=e22]:
+    - alert [ref=e23]:
+      - heading "Não foi possível carregar este NFT" [level=1] [ref=e24]
+      - paragraph [ref=e25]: Verifique sua conexão e tente novamente.
+      - generic [ref=e26]:
+        - button "Tentar novamente" [ref=e27]
+        - link "Voltar ao catálogo" [ref=e28] [cursor=pointer]:
+          - /url: /
+  - region "Notifications alt+T"
+  - generic:
+    - contentinfo:
+      - button "Open TanStack Router Devtools" [ref=e29] [cursor=pointer]:
+        - generic [ref=e101]: "-"
+        - generic [ref=e102]: TanStack Router
+```
+
+# Test source
+
+```ts
+  1  | import { addToCartFromPage, expect, signedIn, test } from './fixtures';
+  2  | 
+  3  | test.describe('loading, failure and retry', () => {
+  4  |   test('a slow detail page shows a skeleton first, then the content', async ({ page, open }) => {
+  5  |     await open('/nft/nft-1', 'slow');
+  6  |     await expect(page.getByLabel('Carregando NFT')).toBeAttached(); // the placeholder is on the page while the data is late
+  7  |     await expect(page.getByRole('heading', { level: 1, name: 'Emerald Ape #042' })).toBeVisible({ timeout: 15_000 });
+  8  |     await expect(page.getByLabel('Carregando NFT')).toHaveCount(0);
+  9  |   });
+  10 | 
+  11 |   test('a slow cart shows a skeleton, then the items', async ({ page, open, mocks }) => {
+  12 |     await open('/');
+  13 |     await addToCartFromPage(page, 'nft-1');
+  14 |     await mocks.setScenario('slow');
+  15 |     await page.goto('/cart');
+  16 |     await expect(page.getByLabel('Carregando carrinho')).toBeAttached(); // the placeholder is on the page while the data is late
+  17 |     await expect(page.getByRole('list', { name: 'Itens do carrinho' })).toBeVisible({ timeout: 15_000 });
+  18 |   });
+  19 | 
+  20 |   test('a slow checkout shows a skeleton, then the form', async ({ page, open, mocks }) => {
+  21 |     await open('/');
+  22 |     await signedIn(page);
+  23 |     await addToCartFromPage(page, 'nft-1');
+  24 |     await mocks.setScenario('slow');
+  25 |     await page.goto('/checkout');
+  26 |     await expect(page.getByLabel('Carregando checkout')).toBeAttached(); // the placeholder is on the page while the data is late
+  27 |     await expect(page.getByRole('button', { name: 'Confirmar compra' })).toBeVisible({ timeout: 15_000 });
+  28 |   });
+  29 | 
+  30 |   test('a failed load says what happened and the retry recovers the page', async ({ page, open, mocks }) => {
+  31 |     await open('/nft/nft-1', 'offline');
+  32 |     await expect(page.getByRole('heading', { name: 'Não foi possível carregar este NFT' })).toBeVisible({ timeout: 20_000 });
+  33 |     await mocks.setScenario('fast');
+  34 |     await page.getByRole('button', { name: 'Tentar novamente' }).click();
+  35 |     await expect(page.getByRole('heading', { level: 1, name: 'Emerald Ape #042' })).toBeVisible();
+  36 |   });
+  37 | 
+  38 |   test('a failed cart load can be retried', async ({ page, open, mocks }) => {
+  39 |     await open('/');
+  40 |     await addToCartFromPage(page, 'nft-1');
+  41 |     await mocks.setScenario('offline');
+  42 |     await page.goto('/cart');
+  43 |     await expect(page.getByRole('heading', { name: 'Não foi possível carregar seu carrinho' })).toBeVisible({ timeout: 20_000 });
+  44 |     await mocks.setScenario('fast');
+  45 |     await page.getByRole('button', { name: 'Tentar novamente' }).click();
+  46 |     await expect(page.getByRole('list', { name: 'Itens do carrinho' })).toBeVisible();
+  47 |   });
+  48 | 
+  49 |   test('buying while offline explains the failure and nothing is added; trying again works', async ({ page, open, mocks }) => {
+  50 |     await open('/nft/nft-1');
+  51 |     await mocks.setScenario('offline');
+> 52 |     await page.getByRole('button', { name: 'COMPRAR' }).click();
+     |                                                         ^ Error: locator.click: Test timeout of 45000ms exceeded.
+  53 |     await expect(page.getByText(/Sem conexão/).first()).toBeVisible({ timeout: 20_000 });
+  54 |     await expect(page.getByRole('link', { name: /^Carrinho/ })).toHaveAccessibleName('Carrinho, 0 itens');
+  55 |     await mocks.setScenario('fast');
+  56 |     await page.getByRole('button', { name: 'COMPRAR' }).click();
+  57 |     await expect(page.getByRole('link', { name: /^Carrinho/ })).toHaveAccessibleName('Carrinho, 1 itens');
+  58 |   });
+  59 | });
+  60 | 
+```=== test-results/01-catalog-catalog-search--1b985-ays-so-when-nothing-matches-desktop
+# Instructions
+
+- Following Playwright test failed.
+- Explain why, be concise, respect Playwright best practices.
+- Provide a snippet of code with the fix, if possible.
+
+# Test info
+
+- Name: 01-catalog.spec.ts >> catalog >> search finds what was typed, keeps it in the URL, and says so when nothing matches
+- Location: e2e/01-catalog.spec.ts:26:3
+
+# Error details
+
+```
+Test timeout of 45000ms exceeded.
+```
+
+```
+Error: locator.fill: Test timeout of 45000ms exceeded.
+Call log:
+  - waiting for getByRole('searchbox', { name: 'Buscar NFTs' })
+
+```
+
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - link "KURIO" [ref=e6] [cursor=pointer]:
+        - /url: /
+      - navigation "Principal" [ref=e7]:
+        - link "Início" [ref=e8] [cursor=pointer]:
+          - /url: /
+        - generic "Em breve" [ref=e9]: Mercado
+        - generic "Em breve" [ref=e10]: Criadores
+        - generic "Em breve" [ref=e11]: Aprenda
+      - generic [ref=e12]:
+        - button "Buscar" [active] [ref=e13]
+        - link "Carrinho, 0 itens" [ref=e16] [cursor=pointer]:
+          - /url: /cart
+        - button "Entrar" [ref=e21]
+  - main [ref=e22]:
+    - generic [ref=e23]:
+      - generic [ref=e24]:
+        - paragraph [ref=e25]: Bem-vindo à Kurio
+        - heading "SEJA DONO DO FUTURO DA ARTE DIGITAL" [level=1] [ref=e26]
+        - paragraph [ref=e27]: Descubra NFTs selecionados de criadores emergentes e consagrados. Colecione arte digital rara, apoie artistas e tenha uma parte da cultura da internet.
+        - link "EXPLORAR" [ref=e28] [cursor=pointer]:
+          - /url: "#catalogo"
+      - 'img "NFT Emerald Ape: macaco de óculos redondos e jaqueta verde" [ref=e33]'
+    - generic [ref=e34]:
+      - complementary "Filtros" [ref=e35]:
+        - heading "Coleções" [level=2] [ref=e36]
+        - list [ref=e37]:
+          - listitem [ref=e38]:
+            - button "Arte digital" [ref=e39]
+          - listitem [ref=e40]:
+            - button "Fotografia" [ref=e41]
+          - listitem [ref=e42]:
+            - button "Música" [ref=e43]
+          - listitem [ref=e44]:
+            - button "Arte 3D" [ref=e45]
+          - listitem [ref=e46]:
+            - button "Colecionáveis" [ref=e47]
+          - listitem [ref=e48]:
+            - button "Generativa" [ref=e49]
+          - listitem [ref=e50]:
+            - button "Jogos" [ref=e51]
+          - listitem [ref=e52]:
+            - button "Assinaturas" [ref=e53]
+          - listitem [ref=e54]:
+            - button "Utilidade" [ref=e55]
+        - generic [ref=e56]:
+          - heading "Faixa de preço" [level=2] [ref=e57]
+          - generic [ref=e58]:
+            - generic [ref=e59]:
+              - text: Mín (ETH)
+              - textbox "Mín (ETH)" [ref=e60]:
+                - /placeholder: "0.02"
+            - generic [ref=e61]:
+              - text: Máx (ETH)
+              - textbox "Máx (ETH)" [ref=e62]:
+                - /placeholder: "12.30"
+          - button "Aplicar" [ref=e63]
+        - heading "Rede" [level=2] [ref=e64]
+        - list [ref=e65]:
+          - listitem [ref=e66]:
+            - button "Ethereum" [ref=e67]
+          - listitem [ref=e68]:
+            - button "Polygon" [ref=e69]
+          - listitem [ref=e70]:
+            - button "Solana" [ref=e71]
+        - button "Limpar filtros" [ref=e72]
+      - generic [ref=e73]:
+        - generic [ref=e74]:
+          - tablist [ref=e75]:
+            - tab "Todos os NFTs" [selected] [ref=e76]
+            - tab "Novos lançamentos" [ref=e77]
+            - tab "Em alta" [ref=e78]
+          - generic [ref=e79]:
+            - text: "Ordenar por:"
+            - combobox "Ordenar por:" [ref=e80]:
+              - option "Listados recentemente" [selected]
+              - option "Menor preço"
+              - option "Maior preço"
+              - option "Nome"
+        - paragraph [ref=e81]: "1 resultado para “Emerald Ape #042”"
+        - list [ref=e82]:
+          - listitem [ref=e83]:
+            - link [ref=e84] [cursor=pointer]:
+              - /url: /nft/nft-1
+              - 'img "Emerald Ape #042" [ref=e86]'
+              - paragraph [ref=e88]: "Emerald Ape #042"
+              - paragraph [ref=e89]: 1.19 ETH
+  - region "Notifications alt+T"
+  - generic:
+    - contentinfo:
+      - button "Open TanStack Router Devtools" [ref=e90] [cursor=pointer]:
+        - generic [ref=e162]: "-"
+        - generic [ref=e163]: TanStack Router
+```
+
+# Test source
+
+```ts
+  1   | import { expect, test } from './fixtures';
+  2   | import type { Page } from '@playwright/test';
+  3   | 
+  4   | const cards = (page: Page) => page.locator('#catalogo a[href^="/nft/"]');
+  5   | const count = async (page: Page) => Number(/(\d+)\s+resultado/.exec(await page.locator('#catalogo [aria-live="polite"]').innerText())?.[1]);
+  6   | const prices = async (page: Page) =>
+  7   |   (await cards(page).allInnerTexts()).map((t) => Number(/([\d.]+)\s*ETH/.exec(t)?.[1]));
+  8   | const firstTitle = async (page: Page) => (await cards(page).first().getByRole('img').getAttribute('alt')) ?? '';
+  9   | 
+  10  | async function search(page: Page, term: string) {
+  11  |   await page.getByRole('button', { name: 'Buscar', exact: true }).click();
+  12  |   const box = page.getByRole('searchbox', { name: 'Buscar NFTs' });
+> 13  |   await box.fill(term);
+      |             ^ Error: locator.fill: Test timeout of 45000ms exceeded.
+  14  |   await box.press('Enter');
+  15  | }
+  16  | async function goToPage(page: Page, n: number) {
+  17  |   const scope = page.locator('#catalogo');
+  18  |   await scope.getByRole('button', { name: String(n), exact: true }).or(scope.getByRole('link', { name: String(n), exact: true })).first().click();
+  19  | }
+  20  | async function loaded(page: Page) {
+  21  |   await expect(page.locator('#catalogo [aria-live="polite"]')).toBeVisible();
+  22  |   await expect(cards(page).first()).toBeVisible();
+  23  | }
+  24  | 
+  25  | test.describe('catalog', () => {
+  26  |   test('search finds what was typed, keeps it in the URL, and says so when nothing matches', async ({ page, open }) => {
+  27  |     await open('/');
+  28  |     await loaded(page);
+  29  |     const title = await firstTitle(page);
+  30  | 
+  31  |     await search(page, title);
+  32  |     await expect(page).toHaveURL(/[?&]q=/);
+  33  |     await expect(page.locator('#catalogo [aria-live="polite"]')).toContainText(`“${title}”`);
+  34  |     expect(await count(page)).toBeGreaterThanOrEqual(1);
+  35  |     for (const alt of await cards(page).getByRole('img').evaluateAll((els) => els.map((e) => e.getAttribute('alt') ?? ''))) {
+  36  |       expect(alt.toLowerCase()).toContain(title.toLowerCase());
+  37  |     }
+  38  | 
+  39  |     await search(page, 'zzzz-sem-resultado');
+  40  |     await expect(page.getByText('Nenhum NFT encontrado para esses filtros.')).toBeVisible();
+  41  |     await expect(cards(page)).toHaveCount(0);
+  42  |   });
+  43  | 
+  44  |   test('combined filters narrow the list, are written in the URL, and can be cleared', async ({ page, open }) => {
+  45  |     await open('/');
+  46  |     await loaded(page);
+  47  |     const all = await count(page);
+  48  | 
+  49  |     const aside = page.getByRole('complementary', { name: 'Filtros' });
+  50  |     const options = aside.getByRole('button', { pressed: false });
+  51  |     await options.first().click(); // first collection
+  52  |     await expect(page).toHaveURL(/collection=/);
+  53  |     await expect(aside.getByRole('button', { pressed: true })).toHaveCount(1);
+  54  |     const afterCollection = await count(page);
+  55  |     expect(afterCollection).toBeLessThanOrEqual(all);
+  56  | 
+  57  |     await aside.getByRole('heading', { name: 'Rede' }).locator('xpath=following-sibling::ul[1]').getByRole('button').first().click();
+  58  |     await expect(page).toHaveURL(/network=/);
+  59  |     await expect(page).toHaveURL(/collection=/); // the first filter is still there
+  60  |     await expect(aside.getByRole('button', { pressed: true })).toHaveCount(2);
+  61  |     expect(await count(page)).toBeLessThanOrEqual(afterCollection);
+  62  | 
+  63  |     await aside.getByRole('button', { name: 'Limpar filtros' }).click();
+  64  |     await expect(page).not.toHaveURL(/collection=|network=/);
+  65  |     await expect.poll(() => count(page)).toBe(all);
+  66  |     await expect(aside.getByRole('button', { name: 'Limpar filtros' })).toHaveCount(0);
+  67  |   });
+  68  | 
+  69  |   test('tabs and price range work from the URL and the list obeys them', async ({ page, open }) => {
+  70  |     await open('/?minPrice=1&maxPrice=2');
+  71  |     await loaded(page);
+  72  |     for (const p of await prices(page)) {
+  73  |       expect(p).toBeGreaterThanOrEqual(1);
+  74  |       expect(p).toBeLessThanOrEqual(2);
+  75  |     }
+  76  |     const tabs = page.getByRole('tab');
+  77  |     await expect(tabs.first()).toHaveAttribute('aria-selected', 'true');
+  78  |     await tabs.nth(1).click();
+  79  |     await expect(tabs.nth(1)).toHaveAttribute('aria-selected', 'true');
+  80  |     await expect(page).toHaveURL(/tab=/);
+  81  |   });
+  82  | 
+  83  |   test('sorting by price orders the cards, in both directions, and shows in the URL', async ({ page, open }) => {
+  84  |     await open('/');
+  85  |     await loaded(page);
+  86  |     const sort = page.getByLabel('Ordenar por:');
+  87  | 
+  88  |     await sort.selectOption('price-asc');
+  89  |     await expect(page).toHaveURL(/sort=price-asc/);
+  90  |     await expect.poll(async () => { const p = await prices(page); return p.every((v, i) => i === 0 || v >= p[i - 1]); }).toBe(true);
+  91  | 
+  92  |     await sort.selectOption('price-desc');
+  93  |     await expect(page).toHaveURL(/sort=price-desc/);
+  94  |     await expect.poll(async () => { const p = await prices(page); return p.every((v, i) => i === 0 || v <= p[i - 1]); }).toBe(true);
+  95  |   });
+  96  | 
+  97  |   test('pagination, and any filter change goes back to page 1', async ({ page, open }) => {
+  98  |     await open('/');
+  99  |     await loaded(page);
+  100 |     const first = await firstTitle(page);
+  101 | 
+  102 |     await goToPage(page, 2);
+  103 |     await expect(page).toHaveURL(/page=2/);
+  104 |     await expect.poll(() => firstTitle(page)).not.toBe(first);
+  105 | 
+  106 |     await page.getByLabel('Ordenar por:').selectOption('price-asc');
+  107 |     await expect(page).toHaveURL(/page=1/);
+  108 |   });
+  109 | 
+  110 |   test('the browser history restores each state, and a shared URL opens the same state', async ({ page, open }) => {
+  111 |     await open('/?sort=price-asc');
+  112 |     await loaded(page);
+  113 |     const pageOne = await firstTitle(page);
+```=== test-results/01-catalog-catalog-paginat-eab84--change-goes-back-to-page-1-desktop
+# Instructions
+
+- Following Playwright test failed.
+- Explain why, be concise, respect Playwright best practices.
+- Provide a snippet of code with the fix, if possible.
+
+# Test info
+
+- Name: 01-catalog.spec.ts >> catalog >> pagination, and any filter change goes back to page 1
+- Location: e2e/01-catalog.spec.ts:97:3
+
+# Error details
+
+```
+Test timeout of 45000ms exceeded.
+```
+
+```
+Error: locator.click: Test timeout of 45000ms exceeded.
+Call log:
+  - waiting for locator('#catalogo').getByRole('button', { name: '2', exact: true }).or(locator('#catalogo').getByRole('link', { name: '2', exact: true })).first()
+
+```
+
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - link "KURIO" [ref=e6] [cursor=pointer]:
+        - /url: /
+      - navigation "Principal" [ref=e7]:
+        - link "Início" [ref=e8] [cursor=pointer]:
+          - /url: /
+        - generic "Em breve" [ref=e9]: Mercado
+        - generic "Em breve" [ref=e10]: Criadores
+        - generic "Em breve" [ref=e11]: Aprenda
+      - generic [ref=e12]:
+        - button "Buscar" [ref=e13]
+        - link "Carrinho, 0 itens" [ref=e16] [cursor=pointer]:
+          - /url: /cart
+        - button "Entrar" [ref=e21]
+  - main [ref=e22]:
+    - generic [ref=e23]:
+      - generic [ref=e24]:
+        - paragraph [ref=e25]: Bem-vindo à Kurio
+        - heading "SEJA DONO DO FUTURO DA ARTE DIGITAL" [level=1] [ref=e26]
+        - paragraph [ref=e27]: Descubra NFTs selecionados de criadores emergentes e consagrados. Colecione arte digital rara, apoie artistas e tenha uma parte da cultura da internet.
+        - link "EXPLORAR" [ref=e28] [cursor=pointer]:
+          - /url: "#catalogo"
+      - 'img "NFT Emerald Ape: macaco de óculos redondos e jaqueta verde" [ref=e33]'
+    - generic [ref=e34]:
+      - complementary "Filtros" [ref=e35]:
+        - heading "Coleções" [level=2] [ref=e36]
+        - list [ref=e37]:
+          - listitem [ref=e38]:
+            - button "Arte digital" [ref=e39]
+          - listitem [ref=e40]:
+            - button "Fotografia" [ref=e41]
+          - listitem [ref=e42]:
+            - button "Música" [ref=e43]
+          - listitem [ref=e44]:
+            - button "Arte 3D" [ref=e45]
+          - listitem [ref=e46]:
+            - button "Colecionáveis" [ref=e47]
+          - listitem [ref=e48]:
+            - button "Generativa" [ref=e49]
+          - listitem [ref=e50]:
+            - button "Jogos" [ref=e51]
+          - listitem [ref=e52]:
+            - button "Assinaturas" [ref=e53]
+          - listitem [ref=e54]:
+            - button "Utilidade" [ref=e55]
+        - generic [ref=e56]:
+          - heading "Faixa de preço" [level=2] [ref=e57]
+          - generic [ref=e58]:
+            - generic [ref=e59]:
+              - text: Mín (ETH)
+              - textbox "Mín (ETH)" [ref=e60]:
+                - /placeholder: "0.02"
+            - generic [ref=e61]:
+              - text: Máx (ETH)
+              - textbox "Máx (ETH)" [ref=e62]:
+                - /placeholder: "12.30"
+          - button "Aplicar" [ref=e63]
+        - heading "Rede" [level=2] [ref=e64]
+        - list [ref=e65]:
+          - listitem [ref=e66]:
+            - button "Ethereum" [ref=e67]
+          - listitem [ref=e68]:
+            - button "Polygon" [ref=e69]
+          - listitem [ref=e70]:
+            - button "Solana" [ref=e71]
+      - generic [ref=e72]:
+        - generic [ref=e73]:
+          - tablist [ref=e74]:
+            - tab "Todos os NFTs" [selected] [ref=e75]
+            - tab "Novos lançamentos" [ref=e76]
+            - tab "Em alta" [ref=e77]
+          - generic [ref=e78]:
+            - text: "Ordenar por:"
+            - combobox "Ordenar por:" [ref=e79]:
+              - option "Listados recentemente" [selected]
+              - option "Menor preço"
+              - option "Maior preço"
+              - option "Nome"
+        - paragraph [ref=e80]: 42 resultados
+        - list [ref=e81]:
+          - listitem [ref=e82]:
+            - link [ref=e83] [cursor=pointer]:
+              - /url: /nft/nft-1
+              - 'img "Emerald Ape #042" [ref=e85]'
+              - paragraph [ref=e87]: "Emerald Ape #042"
+              - paragraph [ref=e88]: 1.19 ETH
+          - listitem [ref=e89]:
+            - link [ref=e90] [cursor=pointer]:
+              - /url: /nft/nft-2
+              - 'img "Sage Nomad #009" [ref=e92]'
+              - paragraph [ref=e94]: "Sage Nomad #009"
+              - paragraph [ref=e95]: 1.69 ETH
+          - listitem [ref=e96]:
+            - link [ref=e97] [cursor=pointer]:
+              - /url: /nft/nft-3
+              - 'img "Neon Vessel #552" [ref=e99]'
+              - paragraph [ref=e101]: "Neon Vessel #552"
+              - paragraph [ref=e102]: 1.99 ETH
+          - listitem [ref=e103]:
+            - link [ref=e104] [cursor=pointer]:
+              - /url: /nft/nft-4
+              - 'img "Cosmic Bloom #118" [ref=e106]'
+              - paragraph [ref=e108]: "Cosmic Bloom #118"
+              - paragraph [ref=e109]: 1.29 ETH
+          - listitem [ref=e110]:
+            - link [ref=e111] [cursor=pointer]:
+              - /url: /nft/nft-5
+              - 'img "Violet Nomad #314" [ref=e113]'
+              - paragraph [ref=e115]: "Violet Nomad #314"
+              - paragraph [ref=e116]: 1.39 ETH
+          - listitem [ref=e117]:
+            - link [ref=e118] [cursor=pointer]:
+              - /url: /nft/nft-6
+              - 'img "Ivory Baron #088" [ref=e120]'
+              - paragraph [ref=e122]: "Ivory Baron #088"
+              - paragraph [ref=e123]: 1.79 ETH
+          - listitem [ref=e124]:
+            - link [ref=e125] [cursor=pointer]:
+              - /url: /nft/nft-7
+              - 'img "Lunar Beast #968" [ref=e127]'
+              - paragraph [ref=e129]: "Lunar Beast #968"
+              - paragraph [ref=e130]: 4.14 ETH
+          - listitem [ref=e131]:
+            - link [ref=e132] [cursor=pointer]:
+              - /url: /nft/nft-8
+              - 'img "Solar Nomad #998" [ref=e134]'
+              - paragraph [ref=e136]: "Solar Nomad #998"
+              - paragraph [ref=e137]: 11.20 ETH
+          - listitem [ref=e138]:
+            - link [ref=e139] [cursor=pointer]:
+              - /url: /nft/nft-9
+              - 'img "Velvet Nomad #124" [ref=e141]'
+              - paragraph [ref=e143]: "Velvet Nomad #124"
+              - paragraph [ref=e144]: 2.50 ETH
+        - navigation "Paginação" [ref=e145]:
+          - button "Página 1" [ref=e146]: "1"
+          - button "Página 2" [ref=e147]: "2"
+          - button "Página 3" [ref=e148]: "3"
+          - button "Página 4" [ref=e149]: "4"
+          - button "Página 5" [ref=e150]: "5"
+          - button "Próxima página" [ref=e151]: ›
+  - region "Notifications alt+T"
+  - generic:
+    - contentinfo:
+      - button "Open TanStack Router Devtools" [ref=e152] [cursor=pointer]:
+        - generic [ref=e224]: "-"
+        - generic [ref=e225]: TanStack Router
+```
+
+# Test source
+
+```ts
+  1   | import { expect, test } from './fixtures';
+  2   | import type { Page } from '@playwright/test';
+  3   | 
+  4   | const cards = (page: Page) => page.locator('#catalogo a[href^="/nft/"]');
+  5   | const count = async (page: Page) => Number(/(\d+)\s+resultado/.exec(await page.locator('#catalogo [aria-live="polite"]').innerText())?.[1]);
+  6   | const prices = async (page: Page) =>
+  7   |   (await cards(page).allInnerTexts()).map((t) => Number(/([\d.]+)\s*ETH/.exec(t)?.[1]));
+  8   | const firstTitle = async (page: Page) => (await cards(page).first().getByRole('img').getAttribute('alt')) ?? '';
+  9   | 
+  10  | async function search(page: Page, term: string) {
+  11  |   await page.getByRole('button', { name: 'Buscar', exact: true }).click();
+  12  |   const box = page.getByRole('searchbox', { name: 'Buscar NFTs' });
+  13  |   await box.fill(term);
+  14  |   await box.press('Enter');
+  15  | }
+  16  | async function goToPage(page: Page, n: number) {
+  17  |   const scope = page.locator('#catalogo');
+> 18  |   await scope.getByRole('button', { name: String(n), exact: true }).or(scope.getByRole('link', { name: String(n), exact: true })).first().click();
+      |                                                                                                                                           ^ Error: locator.click: Test timeout of 45000ms exceeded.
+  19  | }
+  20  | async function loaded(page: Page) {
+  21  |   await expect(page.locator('#catalogo [aria-live="polite"]')).toBeVisible();
+  22  |   await expect(cards(page).first()).toBeVisible();
+  23  | }
+  24  | 
+  25  | test.describe('catalog', () => {
+  26  |   test('search finds what was typed, keeps it in the URL, and says so when nothing matches', async ({ page, open }) => {
+  27  |     await open('/');
+  28  |     await loaded(page);
+  29  |     const title = await firstTitle(page);
+  30  | 
+  31  |     await search(page, title);
+  32  |     await expect(page).toHaveURL(/[?&]q=/);
+  33  |     await expect(page.locator('#catalogo [aria-live="polite"]')).toContainText(`“${title}”`);
+  34  |     expect(await count(page)).toBeGreaterThanOrEqual(1);
+  35  |     for (const alt of await cards(page).getByRole('img').evaluateAll((els) => els.map((e) => e.getAttribute('alt') ?? ''))) {
+  36  |       expect(alt.toLowerCase()).toContain(title.toLowerCase());
+  37  |     }
+  38  | 
+  39  |     await search(page, 'zzzz-sem-resultado');
+  40  |     await expect(page.getByText('Nenhum NFT encontrado para esses filtros.')).toBeVisible();
+  41  |     await expect(cards(page)).toHaveCount(0);
+  42  |   });
+  43  | 
+  44  |   test('combined filters narrow the list, are written in the URL, and can be cleared', async ({ page, open }) => {
+  45  |     await open('/');
+  46  |     await loaded(page);
+  47  |     const all = await count(page);
+  48  | 
+  49  |     const aside = page.getByRole('complementary', { name: 'Filtros' });
+  50  |     const options = aside.getByRole('button', { pressed: false });
+  51  |     await options.first().click(); // first collection
+  52  |     await expect(page).toHaveURL(/collection=/);
+  53  |     await expect(aside.getByRole('button', { pressed: true })).toHaveCount(1);
+  54  |     const afterCollection = await count(page);
+  55  |     expect(afterCollection).toBeLessThanOrEqual(all);
+  56  | 
+  57  |     await aside.getByRole('heading', { name: 'Rede' }).locator('xpath=following-sibling::ul[1]').getByRole('button').first().click();
+  58  |     await expect(page).toHaveURL(/network=/);
+  59  |     await expect(page).toHaveURL(/collection=/); // the first filter is still there
+  60  |     await expect(aside.getByRole('button', { pressed: true })).toHaveCount(2);
+  61  |     expect(await count(page)).toBeLessThanOrEqual(afterCollection);
+  62  | 
+  63  |     await aside.getByRole('button', { name: 'Limpar filtros' }).click();
+  64  |     await expect(page).not.toHaveURL(/collection=|network=/);
+  65  |     await expect.poll(() => count(page)).toBe(all);
+  66  |     await expect(aside.getByRole('button', { name: 'Limpar filtros' })).toHaveCount(0);
+  67  |   });
+  68  | 
+  69  |   test('tabs and price range work from the URL and the list obeys them', async ({ page, open }) => {
+  70  |     await open('/?minPrice=1&maxPrice=2');
+  71  |     await loaded(page);
+  72  |     for (const p of await prices(page)) {
+  73  |       expect(p).toBeGreaterThanOrEqual(1);
+  74  |       expect(p).toBeLessThanOrEqual(2);
+  75  |     }
+  76  |     const tabs = page.getByRole('tab');
+  77  |     await expect(tabs.first()).toHaveAttribute('aria-selected', 'true');
+  78  |     await tabs.nth(1).click();
+  79  |     await expect(tabs.nth(1)).toHaveAttribute('aria-selected', 'true');
+  80  |     await expect(page).toHaveURL(/tab=/);
+  81  |   });
+  82  | 
+  83  |   test('sorting by price orders the cards, in both directions, and shows in the URL', async ({ page, open }) => {
+  84  |     await open('/');
+  85  |     await loaded(page);
+  86  |     const sort = page.getByLabel('Ordenar por:');
+  87  | 
+  88  |     await sort.selectOption('price-asc');
+  89  |     await expect(page).toHaveURL(/sort=price-asc/);
+  90  |     await expect.poll(async () => { const p = await prices(page); return p.every((v, i) => i === 0 || v >= p[i - 1]); }).toBe(true);
+  91  | 
+  92  |     await sort.selectOption('price-desc');
+  93  |     await expect(page).toHaveURL(/sort=price-desc/);
+  94  |     await expect.poll(async () => { const p = await prices(page); return p.every((v, i) => i === 0 || v <= p[i - 1]); }).toBe(true);
+  95  |   });
+  96  | 
+  97  |   test('pagination, and any filter change goes back to page 1', async ({ page, open }) => {
+  98  |     await open('/');
+  99  |     await loaded(page);
+  100 |     const first = await firstTitle(page);
+  101 | 
+  102 |     await goToPage(page, 2);
+  103 |     await expect(page).toHaveURL(/page=2/);
+  104 |     await expect.poll(() => firstTitle(page)).not.toBe(first);
+  105 | 
+  106 |     await page.getByLabel('Ordenar por:').selectOption('price-asc');
+  107 |     await expect(page).toHaveURL(/page=1/);
+  108 |   });
+  109 | 
+  110 |   test('the browser history restores each state, and a shared URL opens the same state', async ({ page, open }) => {
+  111 |     await open('/?sort=price-asc');
+  112 |     await loaded(page);
+  113 |     const pageOne = await firstTitle(page);
+  114 | 
+  115 |     await goToPage(page, 2);
+  116 |     await expect(page).toHaveURL(/page=2/);
+  117 |     const pageTwo = await firstTitle(page);
+  118 | 
+```=== test-results/06-purchase-purchase-from-the-catalog-to-a-confirmed-receipt-desktop
+# Error details
+
+```
+Error: locator.click: Test ended.
+Call log:
+  - waiting for getByRole('button', { name: 'Aumentar quantidade' })
+    - locator resolved to <button type="button" aria-label="Aumentar quantidade" class="flex size-8 items-center justify-center rounded-full bg-primary text-primary-foreground disabled:opacity-40">…</button>
+  - attempting click action
+    - waiting for element to be visible, enabled and stable
+
+```
+
+# Test source
+=== test-results/06-purchase-purchase-anoth-b8e7f-open-someone-else-s-receipt-desktop
+# Error details
+
+```
+Error: expect(locator).toBeVisible() failed
+
+Locator: getByRole('heading', { name: 'Compra confirmada' })
+Expected: visible
+Timeout: 8000ms
+Error: element(s) not found
+
+Call log:
+  - Expect "toBeVisible" getByRole('heading', { name: 'Compra confirmada' }) with timeout 8000ms
+  - waiting for getByRole('heading', { name: 'Compra confirmada' })
+
+```
+
+```yaml
+- banner:
+  - link "KURIO":
+    - /url: /
+  - navigation "Principal":
+    - link "Início":
+      - /url: /
+    - text: Mercado Criadores Aprenda
+  - button "Buscar"
+  - link "Carrinho, 0 itens":
+    - /url: /cart
+  - link "Perfil de Anthony Silva":
+    - /url: /profile
+    - text: Anthony Silva
+  - button "Sair"
+- main:
+  - status:
+    - heading "Processando pagamento…" [level=1]
+    - paragraph: "Isto leva alguns segundos. Você pode sair desta página: o pedido continua."
+  - region "Comprovante":
+    - term: Pedido
+    - definition: ord_000001
+    - term: Data
+    - definition: 15 de out. de 2026, 14:24
+    - term: Carteira
+    - definition: MetaMask Principal · 0x71C7…39A2
+    - list "Itens comprados":
+      - listitem:
+        - paragraph: "Emerald Ape #042"
+        - paragraph: Edição ABERTA · 1 × 1.19 ETH
+        - paragraph: 1.19 ETH
+    - term: Subtotal
+    - definition: 1.19 ETH
+    - term: Taxa de rede
+    - definition: 0.006 ETH
+    - term: Total
+    - definition: 1.196 ETH
+    - paragraph: Os valores acima ficaram registrados no momento da compra e não mudam se o catálogo mudar.
+  - link "Continuar explorando":
+    - /url: /
+- region "Notifications alt+T"
+- contentinfo:
+  - button "Open TanStack Router Devtools":
+    - img
+    - img
+    - text: "- TanStack Router"
+```
+
+# Test source
+=== test-results/06-purchase-purchase-from-the-catalog-to-a-confirmed-receipt-desktop
+# Error details
+
+```
+Error: expect(locator).toBeVisible() failed
+
+Locator: getByRole('heading', { name: 'Compra confirmada' })
+Expected: visible
+Timeout: 8000ms
+Error: element(s) not found
+
+Call log:
+  - Expect "toBeVisible" getByRole('heading', { name: 'Compra confirmada' }) with timeout 8000ms
+  - waiting for getByRole('heading', { name: 'Compra confirmada' })
+
+```
+
+```yaml
+- banner:
+  - link "KURIO":
+    - /url: /
+  - navigation "Principal":
+    - link "Início":
+      - /url: /
+    - text: Mercado Criadores Aprenda
+  - button "Buscar"
+  - link "Carrinho, 0 itens":
+    - /url: /cart
+  - link "Perfil de Anthony Silva":
+    - /url: /profile
+    - text: Anthony Silva
+  - button "Sair"
+- main:
+  - status:
+    - heading "Processando pagamento…" [level=1]
+    - paragraph: "Isto leva alguns segundos. Você pode sair desta página: o pedido continua."
+  - region "Comprovante":
+    - term: Pedido
+    - definition: ord_000001
+    - term: Data
+    - definition: 15 de out. de 2026, 14:23
+    - term: Carteira
+    - definition: MetaMask Principal · 0x71C7…39A2
+    - list "Itens comprados":
+      - listitem:
+        - paragraph: "Emerald Ape #042"
+        - paragraph: Edição ABERTA · 2 × 1.19 ETH
+        - paragraph: 2.38 ETH
+    - term: Subtotal
+    - definition: 2.38 ETH
+    - term: Taxa de rede
+    - definition: 0.01 ETH
+    - term: Total
+    - definition: 2.39 ETH
+    - paragraph: Os valores acima ficaram registrados no momento da compra e não mudam se o catálogo mudar.
+  - link "Continuar explorando":
+    - /url: /
+- region "Notifications alt+T"
+- contentinfo:
+  - button "Open TanStack Router Devtools":
+    - img
+    - img
+    - text: "- TanStack Router"
+```
+
+# Test source
+=== test-results/12-loading-failure-loading-feb84-is-added-trying-again-works-desktop
+# Error details
+
+```
+Test timeout of 45000ms exceeded.
+```
+
+```
+Error: locator.click: Test timeout of 45000ms exceeded.
+Call log:
+  - waiting for getByRole('button', { name: 'COMPRAR' })
+
+```
+
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - link "KURIO" [ref=e6] [cursor=pointer]:
+        - /url: /
+      - navigation "Principal" [ref=e7]:
+        - link "Início" [ref=e8] [cursor=pointer]:
+          - /url: /
+        - generic "Em breve" [ref=e9]: Mercado
+        - generic "Em breve" [ref=e10]: Criadores
+        - generic "Em breve" [ref=e11]: Aprenda
+      - generic [ref=e12]:
+        - button "Buscar" [ref=e13]
+        - link "Carrinho, 0 itens" [ref=e16] [cursor=pointer]:
+          - /url: /cart
+        - button "Entrar" [ref=e21]
+  - main [ref=e22]:
+    - alert [ref=e23]:
+      - heading "Não foi possível carregar este NFT" [level=1] [ref=e24]
+      - paragraph [ref=e25]: Verifique sua conexão e tente novamente.
+      - generic [ref=e26]:
+        - button "Tentar novamente" [ref=e27]
+        - link "Voltar ao catálogo" [ref=e28] [cursor=pointer]:
+          - /url: /
+  - region "Notifications alt+T"
+  - generic:
+    - contentinfo:
+      - button "Open TanStack Router Devtools" [ref=e29] [cursor=pointer]:
+        - generic [ref=e101]: "-"
+        - generic [ref=e102]: TanStack Router
+```
+
+# Test source
