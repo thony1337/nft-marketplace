@@ -1,107 +1,24 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>Portfólio - Seu Nome</title>
-
-<link rel="stylesheet" href="style.css">
-
-</head>
-
-<body>
-
-<!-- MENU DE NAVEGAÇÃO -->
-<nav>
-<ul>
-<li><a href="#sobre">Sobre mim</a></li>
-<li><a href="#formacao">Formação</a></li>
-<li><a href="#portfolio">Portfólio</a></li>
-<li><a href="#contato">Contato</a></li>
-</ul>
-</nav>
-
-
-<!-- SOBRE MIM -->
-<section id="sobre">
-<h1>Sobre mim</h1>
-
-<p>
-Me chamo Anthony. Sou estudante de tecnologia e tenho interesse em desenvolvimento web.
-</p>
-
-<p>
-Meus hobbies incluem jogar videogame, estudar programação e ouvir música.
-</p>
-
-</section>
-
-
-<!-- FORMAÇÃO -->
-<section id="formacao">
-
-<h1>Formação</h1>
-
-<ul>
-<li>Curso: Análise e Desenvolvimento de Sistemas</li>
-<li>Idiomas: Português (nativo), Inglês (intermediário)</li>
-<li>Curso de HTML, CSS e JavaScript</li>
-</ul>
-
-</section>
-
-
-<!-- PORTFÓLIO -->
-<section id="portfolio">
-
-<h1>Portfólio</h1>
-
-<p>Alguns trabalhos que já realizei:</p>
-
-<ul>
-
-<li>
-<a href="https://thony1337.github.io/Project-Etch-a-Sketch/" target="_blank">
-Projeto 1 - Etch a Sketch
-</a>
-</li>
-
-<li>
-<a href="https://thony1337.github.io/Project-Calculator/" target="_blank">
-Projeto 2 - Calculator
-</a>
-</li>
-
-</ul>
-
-</section>
-
-
-<!-- CONTATO -->
-<section id="contato">
-
-<h1>Contato</h1>
-
-<form id="formContato">
-
-<label>Nome</label>
-<input type="text" id="nome">
-
-<label>Email</label>
-<input type="email" id="email">
-
-<label>Mensagem</label>
-<textarea id="mensagem"></textarea>
-
-<button type="submit" id="submits">Enviar</button>
-
-</form>
-
-</section>
-
-
-<script src="script.js"></script>
-
-</body>
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#140d0a" />
+    <title>Kurio — Marketplace de NFTs</title>
+    <meta
+      name="description"
+      content="Kurio: explore coleções de NFTs, compre com carteira e acompanhe preços e estoque em tempo real."
+    />
+    <meta property="og:title" content="Kurio — Marketplace de NFTs" />
+    <meta
+      property="og:description"
+      content="Explore coleções de NFTs, compre com carteira e acompanhe preços e estoque em tempo real."
+    />
+    <meta property="og:type" content="website" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
 </html>
