@@ -5,7 +5,7 @@ comprovante, perfil e carteiras, com atualizações em tempo real (Socket.IO).
 Não existe back-end: a API REST e o servidor Socket.IO são **simulados no navegador com MSW**
 (ver [ARCHITECTURE.md](./ARCHITECTURE.md)).
 
-- Demo publicada: _<URL do deploy>_ (os mocks ficam ligados no deploy)
+- Demo publicada: <https://thony1337-nft-marketplace.vercel.app> (os mocks ficam ligados no deploy)
 - Conta de demonstração: `anthony@example.com` / `Senha@123` (outra, para testar isolamento: `collector@example.com` / `Senha@123`)
 
 ## Stack
