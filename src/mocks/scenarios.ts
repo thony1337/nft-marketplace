@@ -17,7 +17,8 @@ export type ScenarioName =
   | 'order-timeout'
   | 'purchase-price-change'
   | 'purchase-sold-out'
-  | 'socket-noisy';
+  | 'socket-noisy'
+  | 'wallet-refused';
 
 export type Scenario = {
   description: string;
@@ -32,6 +33,8 @@ export type Scenario = {
   timeoutAfterOrderCreated?: boolean;
   // The first order attempt finds the market changed under it (happens once per reset)
   duringPurchase?: 'price-change' | 'sell-out';
+  // The wallet refuses every connection request
+  walletConnection?: 'refused';
   // Every event is delivered twice and followed by a stale one (an older version)
   socket?: 'noisy';
   failing?: ReadonlyArray<{
@@ -102,6 +105,11 @@ export const SCENARIOS: Record<ScenarioName, Scenario> = {
     description: 'Eventos em tempo real chegam duplicados e, depois, uma versão antiga atrasada',
     latency: { min: 100, max: 200 },
     socket: 'noisy',
+  },
+  'wallet-refused': {
+    description: 'A carteira recusa toda solicitação de conexão',
+    latency: { min: 100, max: 200 },
+    walletConnection: 'refused',
   },
   'coupon-expired': {
     description: 'Todos os cupons estão expirados (inclusive os já aplicados)',

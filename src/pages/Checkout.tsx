@@ -14,6 +14,7 @@ import { attemptFor, clearAttempt, loadAttempt, type CheckoutAttempt } from '@/l
 import { collectorSchema, fieldErrorsFrom } from '@/lib/schemas';
 import { useAuth } from '../context/AuthContext';
 import { useQuote } from '../hooks/useQuote';
+import { useWalletConnection } from '../hooks/useWalletConnection';
 import { useWallets } from '../hooks/useWallets';
 import type { CollectorData, User, Wallet } from '../types';
 
@@ -98,10 +99,12 @@ export function CheckoutPage() {
   const queryClient = useQueryClient();
   const quote = useQuote();
   const wallets = useWallets();
+  const connection = useWalletConnection();
 
   const [walletId, setWalletId] = useState<string | null>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
   const [walletError, setWalletError] = useState<string | null>(null);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
   const [typed, setTyped] = useState<Typed>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const formRef = useRef<HTMLFormElement>(null);
@@ -175,7 +178,7 @@ export function CheckoutPage() {
   }
 
   const refreshing = quote.isFetching;
-  const canSubmit = data.canCheckout && Boolean(selected) && !refreshing && !order.isPending;
+  const canSubmit = data.canCheckout && Boolean(selected?.connected) && !refreshing && !order.isPending;
 
   const send = (collector: CollectorData) => {
     if (sending.current || !canSubmit || !selected || !token) return;
@@ -200,6 +203,10 @@ export function CheckoutPage() {
             void queryClient.invalidateQueries({ queryKey: ['quote'] });
             void queryClient.invalidateQueries({ queryKey: ['cart'] });
             setNotice({ kind: e.code === 'QUOTE_CHANGED' ? 'changed' : 'stock', message: e.message });
+          } else if (e.code === 'WALLET_NOT_CONNECTED') {
+            clearAttempt();
+            void queryClient.invalidateQueries({ queryKey: ['wallets'] });
+            setWalletError(e.message);
           } else if (e.status === 422 && e.fieldErrors?.walletId) {
             clearAttempt();
             setWalletError(e.fieldErrors.walletId);
@@ -454,7 +461,7 @@ export function CheckoutPage() {
                     <input
                       type="radio" name="wallet" className="size-4 accent-primary"
                       checked={selected?.id === w.id} disabled={order.isPending}
-                      onChange={() => { setWalletId(w.id); setWalletError(null); setErrors({}); }}
+                      onChange={() => { setWalletId(w.id); setWalletError(null); setConnectionError(null); setErrors({}); }}
                     />
                     <span className="min-w-0">
                       <span className="block truncate">
@@ -468,12 +475,41 @@ export function CheckoutPage() {
                 ))}
               </div>
             )}
+            {selected && (
+              <div className="mt-3 flex items-center justify-between gap-3 border border-primary/30 p-3">
+                <p role="status" className="min-w-0 text-sm">
+                  {connection.connect.isPending
+                    ? 'Conectando à carteira…'
+                    : selected.connected
+                      ? `Carteira conectada · ${shortAddress(selected.address)}`
+                      : 'Carteira desconectada'}
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={connection.pending || order.isPending}
+                  onClick={() => {
+                    setConnectionError(null);
+                    setWalletError(null);
+                    const action = selected.connected ? connection.disconnect : connection.connect;
+                    action.mutate(selected.id, { onError: (error) => setConnectionError(toApiError(error).message) });
+                  }}
+                >
+                  {selected.connected ? 'Desconectar' : 'Conectar carteira'}
+                </Button>
+              </div>
+            )}
+            {connectionError && <p role="alert" className="mt-2 text-sm text-destructive">{connectionError}</p>}
             {walletError && <p id="wallet-error" role="alert" className="mt-2 text-sm text-destructive">{walletError}</p>}
           </fieldset>
 
           <Button type="submit" form="collector-form" className="mt-5 h-11 w-full rounded font-bold max-md:h-14 max-md:rounded-full max-md:bg-gradient-to-br max-md:from-[#d28a4c] max-md:to-[#a8693a]" disabled={!canSubmit}>
             {order.isPending ? 'Processando…' : hasUnfinished ? 'Tentar novamente' : 'Confirmar compra'}
           </Button>
+          {selected && !selected.connected && (
+            <p className="mt-3 text-xs text-muted-foreground">Conecte a carteira escolhida para confirmar a compra.</p>
+          )}
           <p className="mt-3 text-xs text-muted-foreground">
             Ambiente de demonstração: nenhum valor real é cobrado.
           </p>

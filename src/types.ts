@@ -29,7 +29,8 @@ export type NftDetail = NFT & {
   tokenId: string; collectionName: string; attributes: string[]; rating: number; reviewCount: number;
   gallery: string[]; details: string; editions: Edition[];
 };
-export type Wallet = { id: string; name: string; address: string; isPrimary: boolean; network: string };
+// `connected` is the simulated connection to the wallet: paying needs the chosen wallet to be connected
+export type Wallet = { id: string; name: string; address: string; isPrimary: boolean; network: string; connected: boolean };
 
 export type ApiErrorBody = { code: string; message: string; fieldErrors?: Record<string, string> };
 export type AuthResponse = { token: string; expiresAt: string; user: User };

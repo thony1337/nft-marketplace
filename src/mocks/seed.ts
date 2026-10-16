@@ -27,10 +27,10 @@ export const MAX_WALLETS = 5;
 // Wallets belong to a user; new accounts start with none
 export const seedWallets: Record<string, Wallet[]> = {
   'user-1': [
-    { id: 'wallet-1', name: 'MetaMask Principal', address: '0x71C7656EC7ab88b098defB751B7401B5f6d839A2', isPrimary: true, network: 'Ethereum Mainnet' },
-    { id: 'wallet-2', name: 'Coinbase Vault', address: '0x94B2c5d8e6A3f1b7094D8c2E5a1F3b6c7D8e81F1', isPrimary: false, network: 'Polygon' },
+    { id: 'wallet-1', name: 'MetaMask Principal', address: '0x71C7656EC7ab88b098defB751B7401B5f6d839A2', isPrimary: true, network: 'Ethereum Mainnet', connected: true },
+    { id: 'wallet-2', name: 'Coinbase Vault', address: '0x94B2c5d8e6A3f1b7094D8c2E5a1F3b6c7D8e81F1', isPrimary: false, network: 'Polygon', connected: false },
   ],
   'user-2': [
-    { id: 'wallet-3', name: 'Carteira Principal', address: '0x3aD4f1B7c9E2058a6d1C4b8E7F0a29c5D6e3B7A1', isPrimary: true, network: 'Ethereum Mainnet' },
+    { id: 'wallet-3', name: 'Carteira Principal', address: '0x3aD4f1B7c9E2058a6d1C4b8E7F0a29c5D6e3B7A1', isPrimary: true, network: 'Ethereum Mainnet', connected: true },
   ],
 };

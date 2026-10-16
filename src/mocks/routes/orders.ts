@@ -55,6 +55,10 @@ export const orderRoutes = [
       return apiError(422, 'VALIDATION_ERROR', 'Carteira não encontrada.', { walletId: 'Escolha uma carteira válida' });
     }
 
+    if (!wallet.connected) {
+      return apiError(409, 'WALLET_NOT_CONNECTED', 'Conecte a carteira escolhida para pagar.');
+    }
+
     const cartKey = `user:${auth.user.id}`;
     const rows = db.carts[cartKey] ?? [];
     if (rows.length === 0) return apiError(409, 'EMPTY_CART', 'Seu carrinho está vazio.');

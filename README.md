@@ -71,6 +71,7 @@ apagar o `localStorage` do site tem o mesmo efeito.
 | `purchase-price-change` | O preço sobe no momento de confirmar a compra (uma vez) |
 | `purchase-sold-out` | A edição esgota no momento de confirmar a compra (uma vez) |
 | `socket-noisy` | Eventos em tempo real duplicados e, em seguida, uma versão antiga atrasada |
+| `wallet-refused` | A carteira recusa toda solicitação de conexão |
 
 Controles no console (`window.__kurioMocks`): `setScenario`, `reset`, `setPrice(nftId, eth)`,
 `setEditionStock(nftId, editionId, stock)`, `settleOrders()`, `dropSockets()`, `setSocketsDown(bool)`,
@@ -87,6 +88,7 @@ Controles no console (`window.__kurioMocks`): `setScenario`, `reset`, `setPrice(
 | Cupom inválido ou expirado | digite um código qualquer; com `coupon-expired`, todos expiram |
 | Pagamento recusado | `?mockScenario=payment-declined`, compre (o carrinho permanece intacto) |
 | Timeout após criar o pedido | `?mockScenario=order-timeout`, compre e tente de novo: volta o **mesmo** pedido |
+| Carteira: conectar, recusar, desconectar | no pagamento, use "Desconectar" e "Conectar carteira" (a principal do usuário de demonstração já começa conectada); com `?mockScenario=wallet-refused` a conexão é recusada e explicada. Sem carteira conectada a compra não é enviada nem aceita pelo servidor |
 | Clique repetido | clique várias vezes em "Confirmar compra": um único pedido |
 | Preço muda / esgota na compra | `purchase-price-change` ou `purchase-sold-out`: a tela exige nova confirmação |
 | Preço muda com o item no carrinho | com o carrinho aberto: `__kurioMocks.setPrice('nft-1', '2.5')` |
@@ -110,7 +112,7 @@ do socket). Os de tempo real passam pelo `socket.io-client`. Cobrem: busca/filtr
 histórico, detalhe e recurso inexistente, cadastro/login/expiração/logout/troca de usuário, favoritos com falha,
 carrinho e cupom, compra até o recibo, falhas de pagamento/clique repetido/timeout, perfil/avatar/senha/carteiras,
 alteração de preço durante o checkout, eventos duplicados e desconexão, teclado e foco, skeletons e recuperação,
-dados do colecionador e regressão visual (início, detalhe, carrinho, pagamento).
+dados do colecionador, conexão/recusa/desconexão da carteira, página não encontrada, shimmer com movimento reduzido e regressão visual (início, detalhe, carrinho, pagamento).
 
 ## Lighthouse
 

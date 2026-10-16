@@ -1,6 +1,7 @@
 import { http, HttpResponse } from 'msw';
 import { fieldErrorsFrom, walletPatchSchema, walletSchema } from '../../lib/schemas';
 import { getDb, saveDb } from '../db';
+import { activeScenario } from '../scenarios';
 import { apiError, authenticate } from '../http';
 import { MAX_WALLETS } from '../seed';
 
@@ -15,7 +16,7 @@ export const walletRoutes = [
   http.get('/api/wallets', ({ request }) => {
     const auth = authenticate(request);
     if (!auth.ok) return auth.response;
-    return HttpResponse.json(listOf(auth.user.id));
+    return HttpResponse.json(listOf(auth.user.id).map((w) => ({ ...w, connected: Boolean(w.connected) })));
   }),
 
   http.post('/api/wallets', async ({ request }) => {
@@ -42,6 +43,7 @@ export const walletRoutes = [
       address,
       network: NETWORK_LABEL[network],
       isPrimary: wallets.length === 0, // the first wallet is the primary one
+      connected: false,
     };
     wallets.push(wallet);
     saveDb();
@@ -64,6 +66,33 @@ export const walletRoutes = [
     if (parsed.data.isPrimary) for (const w of wallets) w.isPrimary = w.id === wallet.id;
     saveDb();
     return HttpResponse.json(wallet);
+  }),
+
+  // Simulated connection. One wallet is connected at a time, like a browser session with a wallet.
+  // The reply is the whole list, so the screen shows exactly what the server now holds.
+  http.post('/api/wallets/:id/connect', ({ params, request }) => {
+    const auth = authenticate(request);
+    if (!auth.ok) return auth.response;
+    const wallets = listOf(auth.user.id);
+    const wallet = wallets.find((w) => w.id === params.id);
+    if (!wallet) return apiError(404, 'WALLET_NOT_FOUND', 'Carteira não encontrada.');
+    if (activeScenario().walletConnection === 'refused') {
+      return apiError(403, 'WALLET_REFUSED', 'A carteira recusou a conexão. Aprove a solicitação na carteira e tente de novo.');
+    }
+    for (const w of wallets) w.connected = w.id === wallet.id;
+    saveDb();
+    return HttpResponse.json(wallets);
+  }),
+
+  http.post('/api/wallets/:id/disconnect', ({ params, request }) => {
+    const auth = authenticate(request);
+    if (!auth.ok) return auth.response;
+    const wallets = listOf(auth.user.id);
+    const wallet = wallets.find((w) => w.id === params.id);
+    if (!wallet) return apiError(404, 'WALLET_NOT_FOUND', 'Carteira não encontrada.');
+    wallet.connected = false;
+    saveDb();
+    return HttpResponse.json(wallets);
   }),
 
   http.delete('/api/wallets/:id', ({ request, params }) => {

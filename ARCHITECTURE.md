@@ -45,14 +45,24 @@ em `ApiError` (`status`, `code`, `isRetryable`, `isSessionProblem`).
 | Cotação e cupom | `GET /quote` · `PUT /cart/coupon` · `DELETE /cart/coupon` |
 | Pedidos | `POST /orders` (exige `Idempotency-Key`) · `GET /orders` · `GET /orders/:id` |
 | Perfil | `PATCH /profile` · `PUT /profile/avatar` · `DELETE /profile/avatar` · `POST /profile/password` |
-| Carteiras | `GET /wallets` · `POST /wallets` · `PATCH /wallets/:id` · `DELETE /wallets/:id` |
+| Carteiras | `GET /wallets` · `POST /wallets` · `PATCH /wallets/:id` · `DELETE /wallets/:id` · `POST /wallets/:id/connect` · `POST /wallets/:id/disconnect` |
 
 Códigos de erro usados: `VALIDATION_ERROR` (422, com `fieldErrors`), `EMAIL_TAKEN` e `WALLET_EXISTS` (409),
 `INVALID_CREDENTIALS`, `UNAUTHENTICATED` e `SESSION_EXPIRED` (401), `FORBIDDEN` (403), `NFT_NOT_FOUND`,
-`ORDER_NOT_FOUND`, `CART_ITEM_NOT_FOUND`, `WALLET_NOT_FOUND` (404), conflitos de disponibilidade
-(`OUT_OF_STOCK`, `QUANTITY_LIMIT`, `QUOTE_CHANGED`, `EMPTY_CART`, 409), `IDEMPOTENCY_KEY_REQUIRED` (400),
+`ORDER_NOT_FOUND`, `CART_ITEM_NOT_FOUND`, `WALLET_NOT_FOUND` (404), `WALLET_REFUSED` (403, a carteira recusou a conexão), conflitos de disponibilidade
+(`OUT_OF_STOCK`, `WALLET_NOT_CONNECTED`, `QUANTITY_LIMIT`, `QUOTE_CHANGED`, `EMPTY_CART`, 409), `IDEMPOTENCY_KEY_REQUIRED` (400),
 `IDEMPOTENCY_CONFLICT` (409), `FILE_TOO_LARGE` (413), `INVALID_CURRENT_PASSWORD` (422) e falhas transitórias
 (5xx, `NETWORK_ERROR`, `TIMEOUT`, marcadas como `isRetryable`).
+
+### Conexão com a carteira (simulada)
+
+Cada carteira tem `connected`. `connect` liga a carteira escolhida e desliga as outras (uma conexão por vez);
+`disconnect` a desliga; a carteira pode recusar (cenário `wallet-refused`, `403 WALLET_REFUSED`). As duas rotas
+respondem com a lista inteira, que substitui o cache `['wallets', token]`. O estado fica no banco simulado, então
+sobrevive ao refresh. No pagamento, o botão "Confirmar compra" só habilita com a carteira escolhida conectada e o
+servidor confere de novo: `POST /orders` com carteira desconectada responde `409 WALLET_NOT_CONNECTED` (a tela
+atualiza o estado e explica). Repetir uma chave de idempotência já aceita continua devolvendo o pedido existente,
+mesmo sem conexão, para não atrapalhar a recuperação.
 
 ### Pedido idempotente
 
