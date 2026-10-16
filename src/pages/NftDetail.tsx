@@ -492,6 +492,10 @@ function DetailSkeleton() {
           <Skeleton className="h-10 w-full" />
         </div>
       </div>
+      <section className="mt-24" aria-hidden="true">
+        <Skeleton className="h-[362px] w-full max-md:h-[602px]" />
+      </section>
+      <NftCarousel title="Mais desta coleção" items={[]} loading />
     </div>
   );
 }

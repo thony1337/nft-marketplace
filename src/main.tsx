@@ -26,9 +26,11 @@ declare module '@tanstack/react-router' {
 
 async function enableMocking() {
   if (import.meta.env.VITE_ENABLE_MOCKS !== 'true') return;
-  const { installMockControls } = await import('./mocks/controls'); // new
-  installMockControls(); // new
-  const { worker } = await import('./mocks/browser');
+  const [{ installMockControls }, { worker }] = await Promise.all([
+    import('./mocks/controls'),
+    import('./mocks/browser'),
+  ]);
+  installMockControls();
   return worker.start({
     onUnhandledRequest: 'bypass',
     serviceWorker: { url: `${import.meta.env.BASE_URL}mockServiceWorker.js` },
