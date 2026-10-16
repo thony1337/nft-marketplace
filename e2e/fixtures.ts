@@ -51,7 +51,7 @@ export const OTHER = { email: 'collector@example.com', password: 'Senha@123', na
 export const test = base.extend<{ mocks: ReturnType<typeof mocksFor>; open: (path?: string, scenario?: string) => Promise<void> }>({
   // Dev-only overlays (TanStack Router/Query devtools) float over the bottom tab bar on phones and
   // swallow clicks; they are not part of the product, so the tests keep them out of the way.
-  page: async ({ page }, use) => {
+  page: async ({ page }, provide) => {
     await page.addInitScript(() => {
       const hide = () => {
         const style = document.createElement('style');
@@ -62,12 +62,12 @@ export const test = base.extend<{ mocks: ReturnType<typeof mocksFor>; open: (pat
       if (document.head) hide();
       else document.addEventListener('DOMContentLoaded', hide, { once: true });
     });
-    await use(page);
+    await provide(page);
   },
-  mocks: async ({ page }, use) => use(mocksFor(page)),
+  mocks: async ({ page }, provide) => provide(mocksFor(page)),
   // Opens a page with the mock server on and a chosen scenario (default: no latency, instant payments)
-  open: async ({ page }, use) => {
-    await use(async (path = '/', scenario = 'fast') => {
+  open: async ({ page }, provide) => {
+    await provide(async (path = '/', scenario = 'fast') => {
       const url = new URL(path, 'http://x');
       url.searchParams.set('mockScenario', scenario);
       await page.goto(`${url.pathname}${url.search}${url.hash}`);

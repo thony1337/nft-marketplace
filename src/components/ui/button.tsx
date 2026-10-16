@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- este arquivo precisa exportar mais que o componente (variantes do botão / `Route` do roteador por arquivos) */
 import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "cn"

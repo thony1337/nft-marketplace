@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- this file also exports the hooks and helpers that read the auth context; it only costs a full reload instead of hot replacement while developing */
 import {
   createContext,
   useCallback,

@@ -1,6 +1,7 @@
+/* eslint-disable react-refresh/only-export-components -- this file also exports the hook that reads the connection status; it only costs a full reload instead of hot replacement while developing */
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { SOCKET_EVENTS, SOCKET_PATH, type AuthErrorEvent, type NftUpdatedEvent, type OrderUpdatedEvent, type SessionReadyEvent } from '../lib/socketEvents';
+import { SOCKET_EVENTS, SOCKET_PATH, type NftUpdatedEvent, type OrderUpdatedEvent, type SessionReadyEvent } from '../lib/socketEvents';
 import { applyNftUpdate, applyOrderUpdate, reconcile } from './applyEvents';
 
 // How long a connection must hold after a gap before it counts as back
@@ -17,13 +18,19 @@ export function RealtimeProvider({ token, children }: { token: string | null; ch
   const queryClient = useQueryClient();
   const [status, setStatus] = useState<RealtimeStatus>('connecting');
 
+  // A different token is a different connection: start again from "connecting" (adjusted while
+  // rendering, not in the effect below, so the screen never shows the old status for one frame)
+  const [connectionToken, setConnectionToken] = useState(token);
+  if (connectionToken !== token) {
+    setConnectionToken(token);
+    setStatus('connecting');
+  }
+
   useEffect(() => {
     let closed = false;
     let socket: import('socket.io-client').Socket | null = null;
     let connectedBefore = false;
     let stable: ReturnType<typeof setTimeout> | undefined;
-    setStatus('connecting');
-
     // Loaded on demand: socket.io-client must be imported after the mock server is running
     void import('socket.io-client').then(({ io }) => {
       if (closed) return;
@@ -66,7 +73,7 @@ export function RealtimeProvider({ token, children }: { token: string | null; ch
         // The server did not accept the token we hold: ask the REST API, which settles it
         if (token && !event.authenticated) void queryClient.invalidateQueries({ queryKey: ['me', token] });
       });
-      socket.on(SOCKET_EVENTS.authError, (_event: AuthErrorEvent) => {
+      socket.on(SOCKET_EVENTS.authError, () => {
         // The auth layer already knows what to do when a request says the session is over
         void queryClient.invalidateQueries({ queryKey: ['me', token] });
       });

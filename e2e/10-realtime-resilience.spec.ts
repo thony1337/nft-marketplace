@@ -5,6 +5,7 @@ const price = (page: import('@playwright/test').Page) => page.getByText(/^\d+(\.
 test.describe('realtime resilience', () => {
   test('duplicated and out-of-date events never move the screen backwards', async ({ page, open, mocks }) => {
     await open('/nft/nft-1', 'socket-noisy');
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible(); // the page has its data: an event before that would have nothing to update
     await expect.poll(() => mocks.socketCount()).toBeGreaterThan(0);
     await mocks.setPrice('nft-1', '3.1');
     await expect(price(page)).toHaveText('3.1 ETH');
@@ -18,6 +19,7 @@ test.describe('realtime resilience', () => {
 
   test('a connection that drops is announced, and the screen is brought up to date when it returns', async ({ page, open, mocks }) => {
     await open('/nft/nft-1');
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
     await expect.poll(() => mocks.socketCount()).toBeGreaterThan(0);
 
     await mocks.setSocketsDown(true);

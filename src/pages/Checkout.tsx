@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
+import { useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { useMutation, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useRouter } from '@tanstack/react-router';
 import { ChevronLeft } from 'lucide-react';
@@ -113,13 +113,11 @@ export function CheckoutPage() {
 
   // A purchase that was sent but never confirmed (timeout, refresh): the same content reuses its key
   const unfinished = token ? loadAttempt(token) : null;
-  useEffect(() => {
-    if (unfinished && walletId === null) setWalletId(unfinished.walletId);
-  }, [unfinished, walletId]);
-
   const list = wallets.data ?? [];
+  // The wallet of an unfinished purchase comes first (it must be sent again with the same content)
+  const chosenId = walletId ?? unfinished?.walletId;
   const selected: Wallet | undefined =
-    list.find((w) => w.id === walletId) ?? list.find((w) => w.isPrimary) ?? list[0];
+    list.find((w) => w.id === chosenId) ?? list.find((w) => w.isPrimary) ?? list[0];
 
   const order = useMutation({
     mutationFn: ({ key, fingerprint, wallet, collector }: { key: string; fingerprint: string; wallet: string; collector: CollectorData }) =>

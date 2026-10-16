@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- este arquivo precisa exportar mais que o componente (variantes do botão / `Route` do roteador por arquivos) */
 import { lazy } from 'react';
 import { createRootRoute, Outlet } from '@tanstack/react-router';
 import { Footer } from '../components/Footer';

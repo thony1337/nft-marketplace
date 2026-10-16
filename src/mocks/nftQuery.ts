@@ -25,7 +25,7 @@ export function queryNfts(all: NFT[], params: NftListParams): NftListResponse {
   if (network) list = list.filter((n) => n.network === network);
 
   list.sort((a, b) => {
-    let diff = 0;
+    let diff: number;
     if (sort === 'price-asc') diff = new Decimal(a.priceInEth).comparedTo(b.priceInEth);
     else if (sort === 'price-desc') diff = new Decimal(b.priceInEth).comparedTo(a.priceInEth);
     else if (sort === 'name') diff = a.title.localeCompare(b.title);

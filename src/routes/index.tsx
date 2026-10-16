@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- este arquivo precisa exportar mais que o componente (variantes do botão / `Route` do roteador por arquivos) */
 import { createFileRoute } from '@tanstack/react-router';
 import { z } from 'zod';
 import { Hero } from '../components/Hero';

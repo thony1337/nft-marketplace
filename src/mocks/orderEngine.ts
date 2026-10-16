@@ -5,9 +5,11 @@ import { adjustStock } from './market';
 import { hash } from './quoteLogic';
 
 // What the UI sees: everything except the bookkeeping fields
+const BOOKKEEPING = ['userId', 'idempotencyKey', 'requestHash', 'settlesAt', 'outcome'] as const;
 export function publicOrder(order: DbOrder): OrderRecord {
-  const { userId: _u, idempotencyKey: _k, requestHash: _h, settlesAt: _s, outcome: _o, ...visible } = order;
-  return visible;
+  const visible: Record<string, unknown> = { ...order };
+  for (const field of BOOKKEEPING) delete visible[field];
+  return visible as OrderRecord;
 }
 
 // Chunk 5 broadcasts these as `order.updated` socket events

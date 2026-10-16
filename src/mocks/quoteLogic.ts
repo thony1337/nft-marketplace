@@ -43,7 +43,8 @@ export function checkCoupon(rawCode: string, subtotal: Decimal): CouponCheck {
 
   const raw = found.kind === 'percent' ? subtotal.times(found.value).div(100) : new Decimal(found.value);
   const discount = Decimal.min(raw, subtotal).toDecimalPlaces(4, Decimal.ROUND_HALF_UP);
-  const { expiresAt: _e, minSubtotal: _m, ...info } = found;
+  // the public coupon is what the user sees: the rules behind it stay on the server
+  const info: CouponInfo = { code: found.code, kind: found.kind, value: found.value, description: found.description };
   return { ok: true, coupon: info, discount };
 }
 
